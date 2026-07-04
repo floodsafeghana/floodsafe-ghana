@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FloodSafe Ghana — Land Investment Risk Intelligence</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0f1e;
+      color: #e8ecf0;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #0d1526;
+      border-bottom: 1px solid #1e2d4a;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; }
+
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #1a6cf0, #0fa8e0);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+
+    .logo-text { font-size: 17px; font-weight: 700; color: #fff; }
+    .logo-text span { color: #1a6cf0; }
+    .tagline { font-size: 11px; color: #5a7a9a; }
+
+    .header-right { display: flex; align-items: center; gap: 8px; }
+
+    .lead-counter {
+      background: #111d35;
+      border: 1px solid #1e2d4a;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #5a7a9a;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .lead-counter strong { color: #1a6cf0; }
+
+    .header-cta {
+      background: linear-gradient(135deg, #1a6cf0, #0fa8e0);
+      color: white; border: none;
+      padding: 7px 14px; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ── Desktop layout ── */
+    .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+    #map { flex: 1; z-index: 1; }
+
+    .sidebar {
+      width: 320px;
+      background: #0d1526;
+      border-left: 1px solid #1e2d4a;
+      display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0;
+      z-index: 10;
+    }
+
+    /* ── Floating mobile search ── */
+    .map-search-float {
+      position: absolute;
+      top: 12px; left: 12px; right: 12px;
+      z-index: 500;
+      display: none;
+    }
+
+    .map-search-float input {
+      width: 100%;
+      background: #0d1526;
+      border: 1px solid #2a3d5e;
+      border-radius: 10px;
+      padding: 11px 14px 11px 36px;
+      color: #e8ecf0;
+      font-size: 14px;
+      outline: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+
+    .map-search-float input::placeholder { color: #3a5070; }
+
+    .map-search-float .search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: #5a7a9a; font-size: 15px; pointer-events: none;
+    }
+
+    .float-search-results {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      background: #0d1526;
+      border: 1px solid #1e2d4a;
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      z-index: 600;
+    }
+
+    .float-search-results.open { display: block; }
+
+    /* ── Desktop search (sidebar) ── */
+    .search-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid #1e2d4a;
+      position: relative;
+    }
+
+    .search-wrapper { position: relative; }
+
+    #zone-search {
+      width: 100%;
+      background: #111d35;
+      border: 1px solid #1e2d4a;
+      border-radius: 8px;
+      padding: 9px 12px 9px 34px;
+      color: #e8ecf0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #zone-search:focus { border-color: #1a6cf0; }
+    #zone-search::placeholder { color: #3a5070; }
+
+    .search-icon-desktop {
+      position: absolute; left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: #3a5070; font-size: 14px; pointer-events: none;
+    }
+
+    .search-results {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #0d1526;
+      border: 1px solid #1e2d4a;
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    .search-results.open { display: block; }
+
+    .search-result-item {
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex; align-items: center; gap: 8px;
+      transition: background 0.1s;
+    }
+
+    .search-result-item:hover, .search-result-item.highlighted { background: #1a2540; }
+
+    .search-result-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .search-result-meta { font-size: 11px; color: #5a7a9a; margin-left: auto; }
+
+    /* ── Sidebar sections ── */
+    .sidebar-section { padding: 18px 16px; border-bottom: 1px solid #1e2d4a; }
+
+    .sidebar-section h3 {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: #5a7a9a; margin-bottom: 12px;
+    }
+
+    .legend-item {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 8px; cursor: pointer;
+      padding: 6px 8px; border-radius: 6px;
+      transition: background 0.15s;
+    }
+
+    .legend-item:hover { background: #1a2540; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+    .legend-label { font-size: 13px; font-weight: 500; color: #c8d4e0; }
+    .legend-count { margin-left: auto; font-size: 11px; color: #5a7a9a; }
+
+    .layer-toggle {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px; cursor: pointer;
+      padding: 6px 8px; border-radius: 6px;
+      font-size: 13px; color: #c8d4e0;
+      transition: background 0.15s;
+    }
+
+    .layer-toggle:hover { background: #1a2540; }
+
+    .toggle-switch {
+      width: 32px; height: 18px; background: #1e2d4a;
+      border-radius: 9px; position: relative; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    .toggle-switch.on { background: #1a6cf0; }
+
+    .toggle-knob {
+      position: absolute; top: 2px; left: 2px;
+      width: 14px; height: 14px;
+      background: #fff; border-radius: 50%;
+      transition: left 0.2s;
+    }
+
+    .toggle-switch.on .toggle-knob { left: 16px; }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .stat-card {
+      background: #111d35; border: 1px solid #1e2d4a;
+      border-radius: 8px; padding: 10px;
+    }
+
+    .stat-value { font-size: 20px; font-weight: 700; color: #fff; }
+    .stat-label { font-size: 10px; color: #5a7a9a; margin-top: 2px; }
+
+    .report-panel { padding: 16px; flex: 1; }
+
+    .report-panel h3 {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: #5a7a9a; margin-bottom: 12px;
+    }
+
+    .report-placeholder {
+      background: #111d35; border: 1px dashed #1e2d4a;
+      border-radius: 8px; padding: 20px;
+      text-align: center; color: #3a5070;
+      font-size: 13px; line-height: 1.6;
+    }
+
+    .zone-report { display: none; }
+    .zone-report.active { display: block; }
+
+    .risk-badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .risk-extreme { background: rgba(220,38,38,0.2); color: #f87171; border: 1px solid rgba(220,38,38,0.4); }
+    .risk-high    { background: rgba(234,88,12,0.2);  color: #fb923c; border: 1px solid rgba(234,88,12,0.4); }
+    .risk-medium  { background: rgba(234,179,8,0.2);  color: #facc15; border: 1px solid rgba(234,179,8,0.4); }
+    .risk-low     { background: rgba(34,197,94,0.2);  color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+
+    .zone-name { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+    .zone-meta { font-size: 12px; color: #5a7a9a; margin-bottom: 14px; }
+
+    .detail-row {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 7px 0; border-bottom: 1px solid #1a2540; font-size: 12px;
+    }
+
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { color: #7a9ab8; flex-shrink: 0; margin-right: 8px; }
+    .detail-val { color: #e8ecf0; font-weight: 500; text-align: right; }
+
+    .verdict-box {
+      margin-top: 14px; padding: 12px;
+      border-radius: 8px; font-size: 12px; line-height: 1.5;
+    }
+
+    .verdict-avoid   { background: rgba(220,38,38,0.1); border: 1px solid rgba(220,38,38,0.3); }
+    .verdict-caution { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); }
+    .verdict-ok      { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); }
+
+    .verdict-title { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
+
+    .assess-btn {
+      display: block; width: 100%; margin-top: 14px;
+      background: #111d35; border: 1px solid #1e2d4a;
+      color: #1a6cf0; padding: 10px;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; text-align: center;
+      transition: background 0.15s;
+    }
+
+    .assess-btn:hover { background: #1a2540; }
+
+    .leads-panel { padding: 14px 16px; border-top: 1px solid #1e2d4a; display: none; }
+    .leads-panel.has-leads { display: block; }
+
+    .leads-panel h3 {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: #5a7a9a; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .leads-badge {
+      background: #1a6cf0; color: white;
+      border-radius: 10px; padding: 1px 7px; font-size: 10px;
+    }
+
+    .lead-item {
+      background: #111d35; border: 1px solid #1e2d4a;
+      border-radius: 6px; padding: 10px; margin-bottom: 6px; font-size: 12px;
+    }
+
+    .lead-name { font-weight: 600; color: #e8ecf0; margin-bottom: 2px; }
+    .lead-detail { color: #5a7a9a; }
+
+    .footer-note {
+      padding: 14px 16px; font-size: 11px; color: #3a5070;
+      border-top: 1px solid #1e2d4a; line-height: 1.5;
+    }
+
+    /* ── Mobile bottom sheet ── */
+    .bottom-sheet {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0d1526;
+      border-top: 1px solid #2a3d5e;
+      border-radius: 16px 16px 0 0;
+      z-index: 800;
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.5);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .bottom-sheet.open { transform: translateY(0); }
+
+    .sheet-handle {
+      display: flex; justify-content: center;
+      padding: 10px 0 6px;
+    }
+
+    .sheet-handle-bar {
+      width: 36px; height: 4px;
+      background: #2a3d5e; border-radius: 2px;
+    }
+
+    .sheet-body { padding: 0 16px 20px; }
+
+    /* ── Mobile bottom nav bar ── */
+    .mobile-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0d1526;
+      border-top: 1px solid #1e2d4a;
+      z-index: 700;
+      padding: 8px 0;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
+
+    .mobile-nav-tabs {
+      display: flex; justify-content: space-around;
+    }
+
+    .nav-tab {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 3px; padding: 4px 16px; cursor: pointer;
+      color: #5a7a9a; font-size: 10px; font-weight: 600;
+      letter-spacing: 0.3px; text-transform: uppercase;
+      transition: color 0.15s;
+    }
+
+    .nav-tab.active { color: #1a6cf0; }
+    .nav-tab-icon { font-size: 18px; }
+
+    /* ── Mobile legend sheet ── */
+    .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+
+    .legend-card {
+      background: #111d35; border: 1px solid #1e2d4a;
+      border-radius: 8px; padding: 12px;
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer; transition: background 0.15s;
+    }
+
+    .legend-card:active { background: #1a2540; }
+
+    .legend-card-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .legend-card-label { font-size: 13px; font-weight: 600; color: #c8d4e0; }
+    .legend-card-count { font-size: 11px; color: #5a7a9a; margin-top: 1px; }
+
+    .mobile-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+
+    /* ── Leaflet popup ── */
+    .leaflet-popup-content-wrapper {
+      background: #0d1526; border: 1px solid #1e2d4a;
+      color: #e8ecf0; border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .leaflet-popup-tip { background: #0d1526; }
+    .leaflet-popup-content { margin: 12px 16px; }
+    .popup-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .popup-risk { font-size: 12px; margin-bottom: 8px; }
+    .popup-btn {
+      background: #1a6cf0; color: white; border: none;
+      padding: 6px 12px; border-radius: 4px; font-size: 12px;
+      cursor: pointer; width: 100%;
+    }
+    .popup-event-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .popup-event-date { font-size: 11px; color: #5a7a9a; margin-bottom: 6px; }
+    .popup-event-desc { font-size: 12px; line-height: 1.5; color: #c8d4e0; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    @media (min-width: 600px) {
+      .modal-overlay { align-items: center; }
+    }
+
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: #0d1526;
+      border: 1px solid #1e2d4a;
+      border-radius: 16px 16px 0 0;
+      width: 100%; max-width: 480px;
+      max-height: 92vh;
+      overflow-y: auto;
+      transform: translateY(40px);
+      transition: transform 0.2s;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    @media (min-width: 600px) {
+      .modal { border-radius: 12px; }
+    }
+
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-header {
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid #1e2d4a;
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+
+    .modal-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+    .modal-subtitle { font-size: 12px; color: #5a7a9a; line-height: 1.4; }
+
+    .modal-close {
+      background: none; border: none; color: #5a7a9a;
+      font-size: 20px; cursor: pointer; line-height: 1;
+      margin-left: 12px; flex-shrink: 0; padding: 4px;
+    }
+
+    .modal-body { padding: 16px 20px; }
+
+    .form-row { margin-bottom: 14px; }
+
+    .form-row label {
+      display: block; font-size: 11px; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      color: #5a7a9a; margin-bottom: 5px;
+    }
+
+    .form-row input,
+    .form-row select,
+    .form-row textarea {
+      width: 100%; background: #111d35;
+      border: 1px solid #1e2d4a; border-radius: 8px;
+      padding: 10px 12px; color: #e8ecf0; font-size: 16px;
+      outline: none; transition: border-color 0.15s;
+      font-family: inherit; -webkit-appearance: none;
+    }
+
+    .form-row input:focus,
+    .form-row select:focus,
+    .form-row textarea:focus { border-color: #1a6cf0; }
+
+    .form-row input::placeholder,
+    .form-row textarea::placeholder { color: #3a5070; }
+
+    .form-row select { cursor: pointer; }
+    .form-row textarea { resize: vertical; min-height: 70px; }
+    .form-row select option { background: #111d35; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .form-submit {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #1a6cf0, #0fa8e0);
+      border: none; border-radius: 10px;
+      color: white; font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 4px;
+      transition: opacity 0.15s;
+    }
+
+    .form-submit:active { opacity: 0.85; }
+
+    .form-note { text-align: center; font-size: 11px; color: #3a5070; margin-top: 10px; line-height: 1.5; }
+
+    .modal-success { padding: 40px 24px; text-align: center; display: none; }
+    .modal-success.active { display: block; }
+    .success-icon { font-size: 48px; margin-bottom: 16px; }
+    .success-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .success-body { font-size: 13px; color: #7a9ab8; line-height: 1.6; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #111d35; border: 1px solid #2a3d5e;
+      border-radius: 8px; padding: 10px 20px;
+      font-size: 13px; color: #e8ecf0;
+      z-index: 9999; opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ── Responsive breakpoints ── */
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .map-search-float { display: block; }
+      .mobile-nav { display: block; }
+      .bottom-sheet { display: block; }
+      .lead-counter { display: none; }
+      .tagline { display: none; }
+      header { padding: 10px 14px; }
+      .logo-text { font-size: 15px; }
+      #map { height: calc(100vh - 52px); height: calc(100dvh - 52px); }
+    }
+
+    @media (min-width: 641px) {
+      .map-search-float { display: none; }
+      .mobile-nav { display: none; }
+      .bottom-sheet { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💧</div>
+    <div>
+      <div class="logo-text">Flood<span>Safe</span> Ghana</div>
+      <div class="tagline">Land Investment Risk Intelligence</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="lead-counter" onclick="openLeadsView()" title="View captured leads">
+      <strong id="lead-count">0</strong> leads
+    </div>
+    <button class="header-cta" onclick="openModal(null)">Get Report</button>
+  </div>
+</header>
+
+<div class="main">
+  <div id="map"></div>
+
+  <!-- Mobile floating search -->
+  <div class="map-search-float">
+    <div style="position:relative">
+      <span class="search-icon" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#5a7a9a;font-size:16px;pointer-events:none">⌕</span>
+      <input type="text" id="mobile-search" placeholder="Search neighborhood..." autocomplete="off" />
+      <div class="float-search-results" id="float-search-results"></div>
+    </div>
+  </div>
+
+  <!-- Desktop sidebar -->
+  <div class="sidebar">
+    <div class="search-section">
+      <div class="search-wrapper">
+        <span class="search-icon-desktop">⌕</span>
+        <input type="text" id="zone-search" placeholder="Search neighborhood..." autocomplete="off" />
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Risk Legend</h3>
+      <div class="legend-item" onclick="filterZone('extreme')">
+        <div class="legend-dot" style="background:#dc2626"></div>
+        <span class="legend-label">Extreme Risk</span>
+        <span class="legend-count">4 zones</span>
+      </div>
+      <div class="legend-item" onclick="filterZone('high')">
+        <div class="legend-dot" style="background:#ea580c"></div>
+        <span class="legend-label">High Risk</span>
+        <span class="legend-count">5 zones</span>
+      </div>
+      <div class="legend-item" onclick="filterZone('medium')">
+        <div class="legend-dot" style="background:#ca8a04"></div>
+        <span class="legend-label">Medium Risk</span>
+        <span class="legend-count">5 zones</span>
+      </div>
+      <div class="legend-item" onclick="filterZone('low')">
+        <div class="legend-dot" style="background:#16a34a"></div>
+        <span class="legend-label">Low Risk</span>
+        <span class="legend-count">4 zones</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Map Layers</h3>
+      <div class="layer-toggle" onclick="toggleLayer('events')">
+        <div class="toggle-switch on" id="switch-events"><div class="toggle-knob"></div></div>
+        <span>Historic Flood Events</span>
+      </div>
+      <div class="layer-toggle" onclick="toggleLayer('zones')">
+        <div class="toggle-switch on" id="switch-zones"><div class="toggle-knob"></div></div>
+        <span>Risk Zones</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Accra Overview</h3>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-value">43%</div><div class="stat-label">zones high/extreme risk</div></div>
+        <div class="stat-card"><div class="stat-value">18</div><div class="stat-label">flood events since 2010</div></div>
+        <div class="stat-card"><div class="stat-value">$340M</div><div class="stat-label">est. damage 2015–2024</div></div>
+        <div class="stat-card"><div class="stat-value">318+</div><div class="stat-label">deaths since 2010</div></div>
+      </div>
+    </div>
+
+    <div class="report-panel">
+      <h3>Zone Report</h3>
+      <div class="report-placeholder" id="placeholder">Click any zone on the map to see its flood risk report and investment recommendation.</div>
+      <div class="zone-report" id="zone-report">
+        <div id="report-badge" class="risk-badge"></div>
+        <div id="report-name" class="zone-name"></div>
+        <div id="report-meta" class="zone-meta"></div>
+        <div id="report-details"></div>
+        <div id="report-verdict" class="verdict-box"></div>
+        <button class="assess-btn" onclick="openModal(currentZone)">Request Site Assessment →</button>
+      </div>
+    </div>
+
+    <div class="leads-panel" id="leads-panel">
+      <h3>Captured Leads <span class="leads-badge" id="leads-badge">0</span></h3>
+      <div id="leads-list"></div>
+    </div>
+
+    <div class="footer-note">
+      Data: NADMO flood records, Ghana Met Agency, NASA SRTM elevation, OpenStreetMap. Scores are indicative — conduct ground-level due diligence.
+    </div>
+  </div>
+</div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-tabs">
+    <div class="nav-tab active" id="tab-map" onclick="showMobileTab('map')">
+      <span class="nav-tab-icon">🗺</span>Map
+    </div>
+    <div class="nav-tab" id="tab-legend" onclick="showMobileTab('legend')">
+      <span class="nav-tab-icon">📊</span>Legend
+    </div>
+    <div class="nav-tab" id="tab-report" onclick="showMobileTab('report')">
+      <span class="nav-tab-icon">📋</span>Report
+    </div>
+    <div class="nav-tab" id="tab-assess" onclick="openModal(null)">
+      <span class="nav-tab-icon">📩</span>Assess
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile bottom sheet -->
+<div class="bottom-sheet" id="bottom-sheet">
+  <div class="sheet-handle" onclick="closeSheet()"><div class="sheet-handle-bar"></div></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div id="modal-form-view">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Request a Site Assessment</div>
+          <div class="modal-subtitle">Our team will prepare a full risk report within 48 hours.</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Full Name *</label>
+            <input type="text" id="f-name" placeholder="Kwame Mensah" />
+          </div>
+          <div class="form-row">
+            <label>Email *</label>
+            <input type="email" id="f-email" placeholder="you@example.com" />
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Phone</label>
+            <input type="tel" id="f-phone" placeholder="+233 ..." />
+          </div>
+          <div class="form-row">
+            <label>Budget</label>
+            <select id="f-budget">
+              <option value="">Select range</option>
+              <option>Under $50,000</option>
+              <option>$50k – $150k</option>
+              <option>$150k – $500k</option>
+              <option>$500k – $1M</option>
+              <option>Over $1M</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Area of Interest *</label>
+          <select id="f-area"><option value="">Select neighborhood</option></select>
+        </div>
+        <div class="form-row">
+          <label>Investment Type</label>
+          <select id="f-type">
+            <option value="">Select type</option>
+            <option>Residential (personal use)</option>
+            <option>Residential (rental income)</option>
+            <option>Commercial development</option>
+            <option>Agricultural land</option>
+            <option>Mixed use</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Notes</label>
+          <textarea id="f-notes" placeholder="GPS coordinates, plot reference, or questions..."></textarea>
+        </div>
+        <button class="form-submit" onclick="submitForm()">Submit Assessment Request</button>
+        <div class="form-note">We'll email you within 48 hours. No spam, ever.</div>
+      </div>
+    </div>
+    <div class="modal-success" id="modal-success">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Request Received!</div>
+      <div class="success-body">
+        We'll send a full flood risk assessment to your email within 48 hours.<br><br>
+        <strong style="color:#e8ecf0">FloodSafe Ghana</strong> — protecting investments, saving livelihoods.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const zones = [
+    { name: "Korle Gonno", risk: "extreme", lat: 5.540, lng: -0.235, radius: 900, area: "Greater Accra", elevation: "2–4m above sea level", floodFrequency: "Every 1–2 years", lastMajorFlood: "2024", drainageQuality: "Very poor — open gutters, blocked channels", proximityToWater: "0.3km to Korle Lagoon", verdict: "avoid", verdictText: "Sits at the Odaw River basin outlet. Floods severely with even moderate rainfall. Land prices are deceptively low — the flood liability is not priced in.", notes: "Flooded in 2011, 2015, 2022, 2024." },
+    { name: "Adabraka", risk: "high", lat: 5.562, lng: -0.215, radius: 800, area: "Greater Accra", elevation: "22m above sea level", floodFrequency: "Every 2–3 years (flash)", lastMajorFlood: "2022", drainageQuality: "Poor — overloaded storm drains", proximityToWater: "1.2km to Odaw River", verdict: "caution", verdictText: "High-density area with overwhelmed drainage. Flash flooding risk May–Jun, Sep–Oct. Commercial investment possible with adequate elevation and drainage improvements.", notes: "World Bank drainage upgrade planned — may reduce risk by 2027." },
+    { name: "Agbogbloshie", risk: "extreme", lat: 5.545, lng: -0.225, radius: 850, area: "Greater Accra", elevation: "3–5m above sea level", floodFrequency: "Every year (rainy season)", lastMajorFlood: "2024", drainageQuality: "Non-existent in informal areas", proximityToWater: "0.1km to Korle Lagoon", verdict: "avoid", verdictText: "Extreme flood zone with compounding e-waste contamination hazard. No investment recommended. Development here faces severe flood liability and potential Ghana EPA regulatory action.", notes: "Some areas designated as wetland — construction may violate land use law." },
+    { name: "Dzorwulu", risk: "low", lat: 5.595, lng: -0.215, radius: 750, area: "Greater Accra", elevation: "58m above sea level", floodFrequency: "Rare (> 10 years)", lastMajorFlood: "2011 (minor)", drainageQuality: "Good — paved roads, functional drains", proximityToWater: "3.5km to nearest flood zone", verdict: "ok", verdictText: "One of Accra's most flood-safe residential areas. High elevation, good infrastructure, consistent drainage maintenance. Premium prices reflect safety and demand.", notes: "Popular with embassy staff and multinationals — stable rental demand." },
+    { name: "East Legon", risk: "low", lat: 5.625, lng: -0.155, radius: 1000, area: "Greater Accra", elevation: "64m above sea level", floodFrequency: "Rare (> 15 years)", lastMajorFlood: "No significant event", drainageQuality: "Good — planned suburb with drainage infrastructure", proximityToWater: "5km to nearest flood zone", verdict: "ok", verdictText: "Premier investment zone. High elevation, planned layout, reliable drainage. Strong ROI on residential and commercial property. Recommended for diaspora and foreign investors.", notes: "Strong demand from middle/upper-income households. Land values appreciating." },
+    { name: "Dansoman", risk: "high", lat: 5.540, lng: -0.265, radius: 900, area: "Greater Accra", elevation: "8–12m above sea level", floodFrequency: "Every 2–4 years", lastMajorFlood: "2023", drainageQuality: "Poor — inadequate for density", proximityToWater: "1.5km to coastal wetlands", verdict: "caution", verdictText: "Dense residential suburb with repeated flooding in low-lying pockets. Risk varies block by block — a 500m elevation difference can be decisive. Micro-level site assessment required.", notes: "Some elevated streets have good track records — request NADMO zone map for specific parcels." },
+    { name: "Tema Community 1", risk: "medium", lat: 5.670, lng: -0.015, radius: 950, area: "Greater Accra / Tema", elevation: "20–30m above sea level", floodFrequency: "Every 4–6 years", lastMajorFlood: "2021", drainageQuality: "Moderate — planned estate, aging infrastructure", proximityToWater: "2km to Tema port/coast", verdict: "caution", verdictText: "Planned industrial-era suburb with aging drainage. Generally safe but showing stress at higher density. Periodic flooding in underpasses. Residential on elevated blocks is acceptable.", notes: "Infrastructure maintenance has declined — factor in renovation costs." },
+    { name: "Achimota", risk: "medium", lat: 5.615, lng: -0.230, radius: 850, area: "Greater Accra", elevation: "40–55m above sea level", floodFrequency: "Every 5–7 years", lastMajorFlood: "2020", drainageQuality: "Mixed — better near forest reserve edge", proximityToWater: "Achimota stream nearby", verdict: "caution", verdictText: "Moderate risk with wide variation. Areas near Achimota Forest are significantly safer. Stream corridor pockets flood periodically. Site-specific assessment recommended.", notes: "Forest reserve proximity adds long-term value and limits nearby development density." },
+    { name: "Madina", risk: "medium", lat: 5.673, lng: -0.168, radius: 900, area: "Greater Accra", elevation: "50–70m above sea level", floodFrequency: "Every 5–8 years", lastMajorFlood: "2019", drainageQuality: "Moderate — some areas very poor", proximityToWater: "Several small streams", verdict: "caution", verdictText: "Expanding suburb with mixed drainage quality. Higher areas (Adenta side) are safer. Urbanisation is outpacing drainage infrastructure. Affordable vs East Legon — viable if parcel elevation is confirmed.", notes: "Zoning enforcement inconsistent — verify land use permits before purchase." },
+    { name: "Labadi / La", risk: "high", lat: 5.565, lng: -0.155, radius: 800, area: "Greater Accra", elevation: "5–15m above sea level", floodFrequency: "Every 2–3 years", lastMajorFlood: "2022", drainageQuality: "Poor — coastal drainage challenges", proximityToWater: "0.5km to Atlantic / La Lagoon", verdict: "caution", verdictText: "Compound risk: inland flooding from rain AND coastal inundation. Sea-level rise increasing risk by 2035. Avoid beachfront parcels. Inland elevated sections may be viable but need detailed assessment.", notes: "Any investment here: 10-year maximum horizon." },
+    { name: "Airport Residential", risk: "low", lat: 5.605, lng: -0.175, radius: 700, area: "Greater Accra", elevation: "62m above sea level", floodFrequency: "Very rare", lastMajorFlood: "No significant event", drainageQuality: "Good — well-maintained expatriate area", proximityToWater: "4km from flood zones", verdict: "ok", verdictText: "Premium, low-risk investment zone. High elevation, consistent maintenance, strong rental market from NGO/diplomatic community. Risk-adjusted value justified for long-term investors.", notes: "Very low vacancy rates. Strong USD-denominated rental income possible." },
+    { name: "Nungua", risk: "high", lat: 5.595, lng: -0.095, radius: 850, area: "Greater Accra", elevation: "4–18m above sea level", floodFrequency: "Every 2–3 years", lastMajorFlood: "2023", drainageQuality: "Poor — rapid informal growth", proximityToWater: "1km to coast, lagoon adjacent", verdict: "caution", verdictText: "Rapid urban expansion created serious drainage deficits. Low coastal elevation in parts. Northern sections are safer but need parcel-level verification.", notes: "Some areas lack formal land titles — verify with Lands Commission before purchase." },
+    { name: "Sakumono / Lashibi", risk: "medium", lat: 5.635, lng: -0.065, radius: 900, area: "Greater Accra", elevation: "25–45m above sea level", floodFrequency: "Every 6–10 years", lastMajorFlood: "2018", drainageQuality: "Moderate — some planned estate areas", proximityToWater: "2km to coast", verdict: "caution", verdictText: "Growing suburb with moderate risk. Planned Lashibi estate areas offer better drainage than informal Sakumono sections. Good growth potential near Tema industrial zone.", notes: "Estate areas have better title security — prefer over roadside plots." },
+    { name: "Odorkor", risk: "high", lat: 5.568, lng: -0.268, radius: 800, area: "Greater Accra", elevation: "10–20m above sea level", floodFrequency: "Every 2–4 years", lastMajorFlood: "2022", drainageQuality: "Poor — high density, insufficient drains", proximityToWater: "Near Densu River delta zone", verdict: "caution", verdictText: "Regular flooding during major rain events. Densu River basin creates downstream risk. Investment possible in elevated sections but requires expert assessment. Affordable pricing reflects the risk.", notes: "NADMO has identified parts of Odorkor as disaster-prone." },
+    { name: "Weija / Gbawe", risk: "extreme", lat: 5.573, lng: -0.330, radius: 1100, area: "Greater Accra", elevation: "Varies — dam-adjacent", floodFrequency: "Every 1–3 years (dam spill)", lastMajorFlood: "2024", drainageQuality: "Poor — informal settlement near dam", proximityToWater: "0.1–0.5km to Weija Reservoir", verdict: "avoid", verdictText: "EXTREME RISK. Downstream of Weija Dam. When the dam spills — almost every rainy season — this zone floods severely. In 2024, thousands were displaced. A direct financial and ethical risk.", notes: "NADMO has repeatedly issued evacuation orders here. Dam spillage is effectively annual." },
+    { name: "Adenta", risk: "low", lat: 5.700, lng: -0.155, radius: 1000, area: "Greater Accra", elevation: "75–95m above sea level", floodFrequency: "Very rare (> 20 years)", lastMajorFlood: "No significant event", drainageQuality: "Good — planned residential suburb", proximityToWater: "6km from major flood zones", verdict: "ok", verdictText: "One of the safest investment zones in Greater Accra. High elevation, planned layout, growing middle-class suburb. Lower entry price than East Legon or Airport with comparable safety.", notes: "Expanding retail and schools driving family demand — strong rental fundamentals." },
+    { name: "Accra Central (CBD)", risk: "extreme", lat: 5.550, lng: -0.205, radius: 750, area: "Greater Accra", elevation: "5–15m above sea level", floodFrequency: "Every 1–2 years", lastMajorFlood: "2024", drainageQuality: "Very poor — colonial-era drains overwhelmed", proximityToWater: "Near Atlantic, Korle Lagoon", verdict: "avoid", verdictText: "Historic CBD sits in a flood basin. Colonial-era drainage overwhelmed by modern rainfall. Ground-floor commercial floods regularly. Upper-floor commercial can work — ground-floor retail is high risk.", notes: "Some areas under government redevelopment — watch for policy changes." },
+  ];
+
+  const floodEvents = [
+    { date: "June 3, 2015", lat: 5.556, lng: -0.202, severity: "catastrophic", deaths: 152, description: "Worst flood in decades. Odaw River overflowed at Circle interchange. Petrol station explosion compounded the tragedy. Stretched from Adabraka to Korle Gonno.", rainfall: "~100mm in 4 hours" },
+    { date: "September 2011", lat: 5.548, lng: -0.218, severity: "severe", deaths: 13, description: "Widespread flooding across low-lying Accra. Korle Bu Teaching Hospital basement flooded. Thousands displaced.", rainfall: "~80mm in 6 hours" },
+    { date: "July 2012", lat: 5.560, lng: -0.195, severity: "major", deaths: 4, description: "Flash floods across Accra Central and Adabraka. Several roads impassable for days.", rainfall: "~70mm in 5 hours" },
+    { date: "October 2022", lat: 5.542, lng: -0.248, severity: "major", deaths: 9, description: "Flash floods across Dansoman, Odorkor, and western suburbs.", rainfall: "~75mm in 5 hours" },
+    { date: "July 2023", lat: 5.573, lng: -0.330, severity: "severe", deaths: 6, description: "Weija Dam spillage forced mass evacuations. Communities within 2km of the reservoir inundated for weeks.", rainfall: "Dam capacity exceeded" },
+    { date: "May 2024", lat: 5.553, lng: -0.212, severity: "severe", deaths: 14, description: "Multiple deaths citywide. Korle Gonno, Weija, and Accra Central worst affected.", rainfall: "~90mm in 3 hours" },
+    { date: "June 2024", lat: 5.545, lng: -0.228, severity: "major", deaths: 5, description: "Second major flood within weeks. Agbogbloshie and surrounding areas severely impacted.", rainfall: "~65mm in 2 hours" },
+  ];
+
+  const severityColors = { catastrophic: "#dc2626", severe: "#ea580c", major: "#ca8a04" };
+  const riskColors = { extreme: "#dc2626", high: "#ea580c", medium: "#ca8a04", low: "#16a34a" };
+  const verdictConfig = {
+    avoid:   { class: "verdict-avoid",   icon: "🚫", title: "AVOID — Do Not Invest" },
+    caution: { class: "verdict-caution", icon: "⚠️",  title: "CAUTION — Invest Selectively" },
+    ok:      { class: "verdict-ok",      icon: "✅", title: "RECOMMENDED — Safe to Invest" },
+  };
+
+  let currentZone = null;
+  let layerState = { events: true, zones: true };
+  const circles = {};
+
+  // ── Map ──
+  const map = L.map('map', { center: [5.590, -0.185], zoom: 12, zoomControl: true });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19
+  }).addTo(map);
+
+  // ── Risk zones ──
+  const zonesLayerGroup = L.layerGroup().addTo(map);
+
+  zones.forEach(zone => {
+    const circle = L.circle([zone.lat, zone.lng], {
+      color: riskColors[zone.risk], fillColor: riskColors[zone.risk],
+      fillOpacity: 0.25, weight: 2, radius: zone.radius
+    }).addTo(zonesLayerGroup);
+
+    circle.bindPopup(`
+      <div class="popup-title">${zone.name}</div>
+      <div class="popup-risk" style="color:${riskColors[zone.risk]}">● ${zone.risk.toUpperCase()} RISK</div>
+      <button class="popup-btn" onclick="showReport('${zone.name}')">View Full Report →</button>
+    `);
+
+    circle.on('click', () => showReport(zone.name));
+    circles[zone.name] = circle;
+  });
+
+  // ── Flood event markers ──
+  const eventsLayerGroup = L.layerGroup().addTo(map);
+
+  floodEvents.forEach(evt => {
+    const icon = L.divIcon({
+      html: `<div style="width:22px;height:22px;background:${severityColors[evt.severity]};border:2px solid rgba(255,255,255,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:white;font-weight:700;box-shadow:0 0 8px ${severityColors[evt.severity]}80;">⚡</div>`,
+      className: '', iconSize: [22, 22], iconAnchor: [11, 11]
+    });
+    L.marker([evt.lat, evt.lng], { icon }).addTo(eventsLayerGroup)
+      .bindPopup(`
+        <div class="popup-event-title">⚡ ${evt.severity.toUpperCase()} — ${evt.date}</div>
+        <div class="popup-event-date">${evt.deaths} deaths · ${evt.rainfall}</div>
+        <div class="popup-event-desc">${evt.description}</div>
+      `);
+  });
+
+  // ── Layer toggles ──
+  function toggleLayer(name) {
+    layerState[name] = !layerState[name];
+    document.getElementById('switch-' + name).classList.toggle('on', layerState[name]);
+    if (name === 'events') layerState[name] ? map.addLayer(eventsLayerGroup) : map.removeLayer(eventsLayerGroup);
+    if (name === 'zones')  layerState[name] ? map.addLayer(zonesLayerGroup)  : map.removeLayer(zonesLayerGroup);
+  }
+
+  // ── Search (shared logic) ──
+  function buildResults(q, container, onSelect) {
+    if (!q) { container.classList.remove('open'); return; }
+    const matches = zones.filter(z => z.name.toLowerCase().includes(q.toLowerCase()));
+    if (!matches.length) { container.classList.remove('open'); return; }
+    container.innerHTML = matches.slice(0, 6).map(z => `
+      <div class="search-result-item" data-name="${z.name}" onmousedown="selectZone('${z.name}', event)">
+        <div class="search-result-dot" style="background:${riskColors[z.risk]}"></div>
+        <span>${z.name}</span>
+        <span class="search-result-meta">${z.risk}</span>
+      </div>
+    `).join('');
+    container.classList.add('open');
+  }
+
+  function selectZone(name, e) {
+    if (e) e.preventDefault();
+    document.getElementById('zone-search').value = name;
+    document.getElementById('mobile-search').value = name;
+    document.getElementById('search-results').classList.remove('open');
+    document.getElementById('float-search-results').classList.remove('open');
+    showReport(name);
+  }
+
+  document.getElementById('zone-search').addEventListener('input', e =>
+    buildResults(e.target.value, document.getElementById('search-results'), selectZone));
+
+  document.getElementById('mobile-search').addEventListener('input', e =>
+    buildResults(e.target.value, document.getElementById('float-search-results'), selectZone));
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrapper') && !e.target.closest('.map-search-float')) {
+      document.getElementById('search-results').classList.remove('open');
+      document.getElementById('float-search-results').classList.remove('open');
+    }
+  });
+
+  // ── Zone report ──
+  function reportHTML(zone) {
+    const vc = verdictConfig[zone.verdict];
+    return `
+      <div class="risk-badge risk-${zone.risk}">${zone.risk} risk</div>
+      <div class="zone-name">${zone.name}</div>
+      <div class="zone-meta">${zone.area}</div>
+      <div>
+        <div class="detail-row"><span class="detail-key">Elevation</span><span class="detail-val">${zone.elevation}</span></div>
+        <div class="detail-row"><span class="detail-key">Flood frequency</span><span class="detail-val">${zone.floodFrequency}</span></div>
+        <div class="detail-row"><span class="detail-key">Last major flood</span><span class="detail-val">${zone.lastMajorFlood}</span></div>
+        <div class="detail-row"><span class="detail-key">Drainage</span><span class="detail-val">${zone.drainageQuality}</span></div>
+        <div class="detail-row"><span class="detail-key">Water proximity</span><span class="detail-val">${zone.proximityToWater}</span></div>
+      </div>
+      <div class="verdict-box ${vc.class}">
+        <div class="verdict-title">${vc.icon} ${vc.title}</div>
+        <div>${zone.verdictText}</div>
+        ${zone.notes ? `<div style="margin-top:8px;font-size:11px;opacity:0.7">Note: ${zone.notes}</div>` : ''}
+      </div>
+      <button class="assess-btn" onclick="openModal('${zone.name}')">Request Site Assessment →</button>
+    `;
+  }
+
+  function showReport(zoneName) {
+    const zone = zones.find(z => z.name === zoneName);
+    if (!zone) return;
+    currentZone = zone.name;
+
+    // Desktop sidebar
+    document.getElementById('placeholder').style.display = 'none';
+    const zr = document.getElementById('zone-report');
+    zr.classList.add('active');
+    zr.innerHTML = reportHTML(zone);
+
+    // Mobile: open bottom sheet on Report tab
+    const isMobile = window.innerWidth <= 640;
+    if (isMobile) {
+      document.getElementById('sheet-body').innerHTML = reportHTML(zone);
+      openSheet();
+      setActiveTab('report');
+    }
+
+    map.closePopup();
+    map.flyTo([zone.lat, zone.lng], 14, { duration: 1 });
+
+    if (!isMobile) {
+      document.querySelector('.sidebar').scrollTop = document.querySelector('.sidebar').scrollHeight;
+    }
+  }
+
+  function filterZone(riskLevel) {
+    zones.forEach(z => circles[z.name].setStyle(
+      z.risk === riskLevel ? { fillOpacity: 0.55, weight: 3 } : { fillOpacity: 0.06, weight: 1 }
+    ));
+    setTimeout(() => zones.forEach(z => circles[z.name].setStyle({ fillOpacity: 0.25, weight: 2 })), 2500);
+  }
+
+  // ── Mobile bottom sheet ──
+  function openSheet() {
+    document.getElementById('bottom-sheet').classList.add('open');
+  }
+
+  function closeSheet() {
+    document.getElementById('bottom-sheet').classList.remove('open');
+    setActiveTab('map');
+  }
+
+  function setActiveTab(name) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    const tab = document.getElementById('tab-' + name);
+    if (tab) tab.classList.add('active');
+  }
+
+  function showMobileTab(name) {
+    setActiveTab(name);
+    if (name === 'map') { closeSheet(); return; }
+
+    if (name === 'legend') {
+      document.getElementById('sheet-body').innerHTML = `
+        <h3 style="font-size:13px;font-weight:700;color:#fff;margin-bottom:14px">Risk Zones</h3>
+        <div class="legend-grid">
+          <div class="legend-card" onclick="filterZone('extreme');closeSheet()">
+            <div><div class="legend-card-dot" style="background:#dc2626"></div></div>
+            <div><div class="legend-card-label">Extreme</div><div class="legend-card-count">4 zones</div></div>
+          </div>
+          <div class="legend-card" onclick="filterZone('high');closeSheet()">
+            <div><div class="legend-card-dot" style="background:#ea580c"></div></div>
+            <div><div class="legend-card-label">High</div><div class="legend-card-count">5 zones</div></div>
+          </div>
+          <div class="legend-card" onclick="filterZone('medium');closeSheet()">
+            <div><div class="legend-card-dot" style="background:#ca8a04"></div></div>
+            <div><div class="legend-card-label">Medium</div><div class="legend-card-count">5 zones</div></div>
+          </div>
+          <div class="legend-card" onclick="filterZone('low');closeSheet()">
+            <div><div class="legend-card-dot" style="background:#16a34a"></div></div>
+            <div><div class="legend-card-label">Low</div><div class="legend-card-count">4 zones</div></div>
+          </div>
+        </div>
+        <h3 style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px">Accra Overview</h3>
+        <div class="mobile-stat-grid">
+          <div class="stat-card"><div class="stat-value">43%</div><div class="stat-label">zones high/extreme risk</div></div>
+          <div class="stat-card"><div class="stat-value">18</div><div class="stat-label">flood events since 2010</div></div>
+          <div class="stat-card"><div class="stat-value">$340M</div><div class="stat-label">est. damage 2015–2024</div></div>
+          <div class="stat-card"><div class="stat-value">318+</div><div class="stat-label">deaths since 2010</div></div>
+        </div>
+        <div style="font-size:11px;color:#3a5070;line-height:1.5">
+          Data: NADMO, Ghana Met Agency, NASA SRTM, OpenStreetMap. Scores are indicative.
+        </div>
+      `;
+      openSheet();
+      return;
+    }
+
+    if (name === 'report') {
+      if (currentZone) {
+        const zone = zones.find(z => z.name === currentZone);
+        document.getElementById('sheet-body').innerHTML = reportHTML(zone);
+      } else {
+        document.getElementById('sheet-body').innerHTML = `
+          <div style="text-align:center;padding:30px 0;color:#3a5070;font-size:14px;line-height:1.7">
+            Tap any colored zone on the map to load its flood risk report here.
+          </div>
+        `;
+      }
+      openSheet();
+    }
+  }
+
+  // Touch swipe-down to close sheet
+  let sheetTouchStart = 0;
+  const sheet = document.getElementById('bottom-sheet');
+  sheet.addEventListener('touchstart', e => { sheetTouchStart = e.touches[0].clientY; }, { passive: true });
+  sheet.addEventListener('touchend', e => {
+    if (e.changedTouches[0].clientY - sheetTouchStart > 60) closeSheet();
+  }, { passive: true });
+
+  // ── Modal ──
+  function openModal(zoneName) {
+    document.getElementById('modal-form-view').style.display = 'block';
+    document.getElementById('modal-success').classList.remove('active');
+    document.getElementById('modal-overlay').classList.add('open');
+    if (zoneName) {
+      const sel = document.getElementById('f-area');
+      for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === zoneName) { sel.selectedIndex = i; break; }
+      }
+    }
+  }
+
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  }
+
+  function submitForm() {
+    const name  = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const area  = document.getElementById('f-area').value;
+
+    if (!name)  { showToast('Please enter your name'); return; }
+    if (!email || !email.includes('@')) { showToast('Please enter a valid email'); return; }
+    if (!area)  { showToast('Please select an area of interest'); return; }
+
+    const leads = JSON.parse(localStorage.getItem('floodsafe_leads') || '[]');
+    leads.push({
+      name, email,
+      phone:  document.getElementById('f-phone').value.trim(),
+      budget: document.getElementById('f-budget').value,
+      area,
+      type:   document.getElementById('f-type').value,
+      notes:  document.getElementById('f-notes').value.trim(),
+      at:     new Date().toLocaleString(),
+    });
+    localStorage.setItem('floodsafe_leads', JSON.stringify(leads));
+
+    document.getElementById('modal-form-view').style.display = 'none';
+    document.getElementById('modal-success').classList.add('active');
+    renderLeads();
+  }
+
+  function renderLeads() {
+    const leads = JSON.parse(localStorage.getItem('floodsafe_leads') || '[]');
+    const count = leads.length;
+    document.getElementById('lead-count').textContent = count;
+    document.getElementById('leads-badge').textContent = count;
+    const panel = document.getElementById('leads-panel');
+    panel.classList.toggle('has-leads', count > 0);
+    document.getElementById('leads-list').innerHTML = leads.slice(-3).reverse().map(l => `
+      <div class="lead-item">
+        <div class="lead-name">${l.name}</div>
+        <div class="lead-detail">${l.email} · ${l.area || 'No area'}</div>
+        <div class="lead-detail" style="font-size:11px;margin-top:2px;opacity:0.6">${l.at}</div>
+      </div>
+    `).join('');
+  }
+
+  function openLeadsView() {
+    const leads = JSON.parse(localStorage.getItem('floodsafe_leads') || '[]');
+    if (!leads.length) { showToast('No leads yet — share the app!'); return; }
+    document.querySelector('.leads-panel').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Populate area dropdown ──
+  const areaSelect = document.getElementById('f-area');
+  zones.forEach(z => {
+    const opt = document.createElement('option');
+    opt.value = z.name;
+    opt.textContent = `${z.name} (${z.risk} risk)`;
+    areaSelect.appendChild(opt);
+  });
+
+  renderLeads();
+</script>
+</body>
+</html>
